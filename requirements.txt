@@ -1,1 +1,3 @@
 falcon == 1.4.1
+numpy == 1.15
+Pillow == 5.4.1
