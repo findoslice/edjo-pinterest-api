@@ -5,3 +5,6 @@ lib64
 pyvenv.cfg
 share
 settings.json
+geckodriver
+geckodriver.log
+.vscode

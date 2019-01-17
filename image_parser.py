@@ -2,6 +2,7 @@ from PIL import Image
 from requests import get
 from io import BytesIO
 from time import time
+import matplotlib.pyplot as plt
 
 def read_image(file_name):
     image = Image.open(file_name)
@@ -34,6 +35,17 @@ def rgbtohex(pixel):
         hexcode += str(hex(num))[2:].upper()
     return hexcode
 
-time1 = time()
-get_colours("https://tardis.ed.ac.uk/~findoslice/profile.jpg")
-print(time() - time1)
+runs = []
+averages = []
+
+for i in range(1,50):
+    temptimes = []
+    for j in range(i):
+        time1 = time()
+        get_colours("https://tardis.ed.ac.uk/~findoslice/profile.jpg")
+        temptimes.append(time() - time1)
+    runs.append(i-1)
+    averages.append(sum(temptimes)/i)
+
+plt.plot(runs, averages)
+plt.show()
