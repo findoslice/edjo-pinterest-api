@@ -7,4 +7,5 @@ share
 settings.json
 geckodriver
 geckodriver.log
+chromedriver
 .vscode
