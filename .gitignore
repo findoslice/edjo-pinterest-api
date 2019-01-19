@@ -9,3 +9,5 @@ geckodriver
 geckodriver.log
 chromedriver
 .vscode
+*.html
+settings.json
