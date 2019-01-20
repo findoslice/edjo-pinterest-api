@@ -11,3 +11,4 @@ chromedriver
 .vscode
 *.html
 settings.json
+*.cpython-34.pyc
