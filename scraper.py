@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 from redis import Redis
+from configparser import ConfigParser
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
@@ -16,14 +17,19 @@ import asyncio
 class PinterestCrawler(object):
 
     def __init__(self):
-        options = webdriver.chrome.options.Options()
-        options.add_argument("--headless")
-        options.add_argument("--test-type")
-        options.add_argument('--ignore-certificate-errors')
-        options.binary_location = '/usr/bin/google-chrome'
+
+        self.config = ConfigParser('config.ini')
+
+        self.options = webdriver.chrome.options.Options()
+
+        for option in self.config['chrome']['options']:
+            self.options.add_argument(option)
+        self.options.binary_location = self.config['chrome']['binary']
         self.browser = self.new_browser()
 
-        self.db = Redis()
+        self.config = ConfigParser('config.ini')
+
+        self.db = Redis(host = self.config['redis']['host'], port = self.config['redis']['port'], db = int(self.config['redis']['db']))
 
         self.initial_time = time()
         self.last_time = time()
@@ -31,12 +37,7 @@ class PinterestCrawler(object):
         self.sum_search_times = 0
 
     def new_browser(self):
-        options = webdriver.chrome.options.Options()
-        options.add_argument("--headless")
-        options.add_argument("--test-type")
-        options.add_argument('--ignore-certificate-errors')
-        options.binary_location = '/usr/bin/google-chrome'
-        return webdriver.Chrome(executable_path=os.path.abspath("chromedriver"), chrome_options=options)
+        return webdriver.Chrome(executable_path=os.path.abspath(self.config["executable"]), chrome_options=self.options)
 
 
     def search_pinterest(self, term):
@@ -47,16 +48,16 @@ class PinterestCrawler(object):
             
             
 
-            soup = BeautifulSoup(self.browser.page_source, 'html.parser')
+            soup = BeautifulSoup(self.browser.page_source, self.config['soup']['parser'])
 
 
             images = soup.find_all("img")
-            self.db.sadd('untaggedimages', *set([image["src"] for image in images]))
+            self.db.sadd(self.config["redis"]["images"], *set([image["src"] for image in images]))
 
 
             search_terms = soup.find_all("div", class_ = "_wa _0 _1 _2 _wd _36 _f _b _6")
             if len(search_terms) != 0:
-                self.db.sadd('pizza', *set([str(t.get_text()) for t in search_terms]))
+                self.db.sadd(self.config["redis"]["searchterms-key"], *set([str(t.get_text()) for t in search_terms]))
 
             self.sum_search_times += time() - self.last_time
 
@@ -75,7 +76,7 @@ class PinterestCrawler(object):
             self.browser = self.new_browser()
             print("failed search")
 
-        term = self.db.spop('pizza').decode('utf-8')
+        term = self.db.spop(self.config["redis"]["searchterms-key"]).decode('utf-8')
         self.last_time = time()
 
         self.search_pinterest(term)
