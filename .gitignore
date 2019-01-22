@@ -10,5 +10,6 @@ geckodriver.log
 chromedriver
 .vscode
 *.html
-settings.json
+.vscode
+__pycache__
 *.cpython-34.pyc

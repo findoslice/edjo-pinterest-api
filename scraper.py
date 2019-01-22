@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 from redis import Redis
+from image_parser import get_colours
 from configparser import ConfigParser
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
@@ -18,18 +19,20 @@ class PinterestCrawler(object):
 
     def __init__(self):
 
-        self.config = ConfigParser('config.ini')
+        self.config = ConfigParser()
+        self.config.read('config.ini')
 
         self.options = webdriver.chrome.options.Options()
 
-        for option in self.config['chrome']['options']:
-            self.options.add_argument(option)
-        self.options.binary_location = self.config['chrome']['binary']
+        self.options.add_argument("--headless")
+        self.options.add_argument("--test-type")
+        self.options.add_argument('--ignore-certificate-errors')
+        #self.options.binary_location = '/usr/bin/google-chrome'
+        self.options.binary_location = str(self.config['chrome']['binary'])
         self.browser = self.new_browser()
 
-        self.config = ConfigParser('config.ini')
-
-        self.db = Redis(host = self.config['redis']['host'], port = self.config['redis']['port'], db = int(self.config['redis']['db']))
+        self.db = Redis(db = int(self.config['redis']['searchdb']))
+        self.db2 = Redis(db = int(self.config['redis']['imagesdb']))
 
         self.initial_time = time()
         self.last_time = time()
@@ -37,7 +40,7 @@ class PinterestCrawler(object):
         self.sum_search_times = 0
 
     def new_browser(self):
-        return webdriver.Chrome(executable_path=os.path.abspath(self.config["executable"]), chrome_options=self.options)
+        return webdriver.Chrome(executable_path=os.path.abspath("chromedriver"), chrome_options=self.options)
 
 
     def search_pinterest(self, term):
@@ -48,16 +51,22 @@ class PinterestCrawler(object):
             
             
 
-            soup = BeautifulSoup(self.browser.page_source, self.config['soup']['parser'])
+            soup = BeautifulSoup(self.browser.page_source, str(self.config['soup']['parser']))
 
 
             images = soup.find_all("img")
-            self.db.sadd(self.config["redis"]["images"], *set([image["src"] for image in images]))
+
+            for image in set([imagetag["src"] for imagetag in images]):
+                try:
+                    colours = get_colours(image)
+                    self.db2.sadd(image, *set([colour[1] for colour in colours]))
+                except:
+                    continue
 
 
             search_terms = soup.find_all("div", class_ = "_wa _0 _1 _2 _wd _36 _f _b _6")
             if len(search_terms) != 0:
-                self.db.sadd(self.config["redis"]["searchterms-key"], *set([str(t.get_text()) for t in search_terms]))
+                self.db.sadd(str(self.config["redis"]["searchterms-key"]), *set([str(t.get_text()) for t in search_terms]))
 
             self.sum_search_times += time() - self.last_time
 
@@ -68,15 +77,16 @@ class PinterestCrawler(object):
                                                                                                                                                                                                                                     1/(len(images)/(time()-self.last_time)),
                                                                                                                                                                                                                                     self.db.scard('pizza'), 
                                                                                                                                                                                                                                     self.search_count, 
-                                                                                                                                                                                                                                    self.db.scard('untaggedimages')))
+                                                                                                                                                                                                                                    self.db2.dbsize()))
             self.search_count += 1
         
         except TimeoutException:
+            self.browser.close()
             self.browser.quit()
             self.browser = self.new_browser()
             print("failed search")
 
-        term = self.db.spop(self.config["redis"]["searchterms-key"]).decode('utf-8')
+        term = self.db.spop(str(self.config["redis"]["searchterms-key"])).decode('utf-8')
         self.last_time = time()
 
         self.search_pinterest(term)
