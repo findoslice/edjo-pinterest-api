@@ -61,7 +61,8 @@ class PinterestCrawler(object):
             for image in set([imagetag["src"] for imagetag in images]):
                 try:
                     colours = get_colours(image)
-                    self.db2.sadd(image, *set([colour[1] for colour in colours]))
+                    for colour in colours:
+                        self.db2.sadd(colour, image)
                 except:
                     continue
 

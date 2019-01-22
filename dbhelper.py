@@ -9,22 +9,15 @@ class DBHelper(object):
         self.config.read('config.ini')
 
         self.db = Redis(db = int(self.config["redis"]["imagesdb"]))
-        self.images = [url.decode('utf-8') for url in self.db.scan("*")]
 
     def searchdb(*colours):
-
-        colours = [colour.encode() for colour in colours]
         
-        correctimages = []
+        links = set(self.db.smembers(colours[0]))
 
-        for image in self.images:
+        for colour in colours[1:]:
+            links -= set(self.db.smembers(colour))
 
-            imagecolours = self.db.smembers("image")
-
-            for colour in colours:
-                if colour not in imagecolours:
-                    break
-            correctimages.append(image)
+        return [link.decode('utf-8') for link in links]
 
             
         
