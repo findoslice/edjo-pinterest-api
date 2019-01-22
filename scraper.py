@@ -8,6 +8,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+from signal import SIGKILL
+
 from requests import get
 from time import time
 from random import randint
@@ -82,7 +84,9 @@ class PinterestCrawler(object):
         
         except TimeoutException:
             self.browser.close()
+            self.browser.service.process.send_signal(SIGKILL)
             self.browser.quit()
+            os.system("killall chrome")
             self.browser = self.new_browser()
             print("failed search")
 
