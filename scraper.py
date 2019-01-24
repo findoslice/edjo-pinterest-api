@@ -60,9 +60,7 @@ class PinterestCrawler(object):
 
             for image in set([imagetag["src"] for imagetag in images]):
                 try:
-                    colours = get_colours(image)
-                    for colour in colours:
-                        self.db2.sadd(colour, image)
+                    self.db.sadd(self.config['redis']['images-key'], image)
                 except:
                     continue
 
@@ -80,7 +78,7 @@ class PinterestCrawler(object):
                                                                                                                                                                                                                                     1/(len(images)/(time()-self.last_time)),
                                                                                                                                                                                                                                     self.db.scard('pizza'), 
                                                                                                                                                                                                                                     self.search_count, 
-                                                                                                                                                                                                                                    self.db2.dbsize()))
+                                                                                                                                                                                                                                    self.db.scard(self.config['redis']['images-key'])))
             self.search_count += 1
         
         except TimeoutException:
