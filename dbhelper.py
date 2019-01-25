@@ -10,7 +10,7 @@ class DBHelper(object):
 
         self.es = Elasticsearch()
 
-    def searchDB(self, colours, pagesize = 25):
+    def searchDB(self, colours, pagesize = 25, cursor = 0):
 
         body = {
                 "_source":["url"],
@@ -31,5 +31,24 @@ class DBHelper(object):
 
         return res
 
-            
+    def countDB(self, colours):
+
+            body = {
+                "query" : {
+                    "bool" : {
+                    "must" : [
+                    {"match":{
+                        "colours":colour
+                    }} for colour in colours]
+                    }
+                }
+            }
+
+            res = self.es.count(index="images", doc_type="tagged", body=body)
+
+            return int(res['count'])
+
+    def count_all(self):
+
+        return int(self.es.count(index="images", doc_type="tagged")['count'])
         

@@ -30,7 +30,7 @@ def test():
         pass
 
     try:
-        page = es.searchDB(data['colours'], pagesize=pagesize)
+        page = es.searchDB(data['colours'], pagesize=pagesize, cursor = 0)
     except:
         return '', status.HTTP_204_NO_CONTENT
 
@@ -50,53 +50,43 @@ def test():
 
     red2.expire(pagekey, expire)
 
-    return (jsonify({"next" : pagekey,
+    return (jsonify({"method" : "/search",
+                     "next" : pagekey,
                      "nextendpoint": "/next",
+                     "expiretime" : expire,
                      "expires" : strftime('%Y-%m-%d %H:%M:%S', gmtime(time() + expire)),
                      "expires-epochtime" : int(time() + expire),
-                     "images" : page}))
+                     "colours" : data["colours"],
+                     "pagesize" : pagesize,
+                     "images" : page})), status.HTTP_200_OK
+
+@api.route('/count')
+def count():
+
+    data = dict(request.data)
+
+    try:
+        colours = data['colours']
+    except:
+        return '', status.HTTP_400_BAD_REQUEST
+    
+    count = es.countDB(colours)
+
+    return (jsonify({"method" : "/count",
+                     "colours" : data['colours'],
+                     "result" : count})), status.HTTP_200_OK
+
+@api.route('/count/all')
+def count_all():
+
+    return (jsonify({"method" : "/count/all",
+                     "result" : es.count_all()})), status.HTTP_200_OK
 
 
-api.run()
 
-"""class GetImages(object):
 
-    def __init__(self):
-        
-        self.config = ConfigParser()
-        self.config.read('config.ini')
 
-        self.red = Redis(db=int(self.config['redis']['imagesdb']))
-        self.red2 = Redis(db=int(self.config['redis']['pagesdb']))
-
-        self.es = DBHelper()
-
-    def on_get(self, req, resp):
-
-        data = req.media.get('colours')
-        if len(data) == 0:
-            resp.body = {"yeet" : "yote"}
-            return
-        try:
-            pagesize = int(req.media.get('pagesize'))
-            page = self.es.searchDB(data, pagesize = pagesize)
-        except:
-            pagesize = 25
-            page = self.es.searchDB(data)
-
-        if len(page) == 0:
-            resp.status = falcon.HTTP_404
-            return
-
-        pagekey = str(pagesize) + 'b' + str(randint(0,10000000000))
-
-        self.red2.add(pagekey, 1)
-
-        resp.body = {
-            "next" : pagekey,
-            "next-endpoint" : "/next",
-            "images" : page
-        }
-        resp.status = falcon.HTTP_200"""
+if __name__ == "__main__":
+    api.run()
 
 
