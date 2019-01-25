@@ -14,7 +14,7 @@ class DBHelper(object):
 
         body = {
                 "_source":["url"],
-                "from" : 0, "size" : pagesize,
+                "from" : cursor, "size" : pagesize,
                 "query" : {
                     "bool" : {
                     "must" : [
