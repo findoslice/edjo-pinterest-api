@@ -1,1 +1,5 @@
-{"colours" : ["#FFFFFF", "#FFFFEE"]}
+{
+    "colours" : ["#FFFFFF", "#FFFFEE"],
+    "pagesize" : 10,
+    "expire" : 1000
+}

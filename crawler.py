@@ -24,11 +24,20 @@ for thread in threads:
 
     thread.start()
 
+def count_scrapers():
+
+    return len([thread for thread in threads if thread.name == "scraper"])
+
+def count_classifiers():
+
+    return len([thread for thread in threads if thread.name == "classifier"])
+
+
 
 try:
     while True:
-
-        if red.scard(config['redis']['images-key']) > 50:
+        
+        if red.scard(config['redis']['images-key']) > 30 and count_scrapers()/int(config['crawler']['maxthreads']) > 0.2:
             for i in range(len(threads)):
                 if threads[i].name == "scraper":
                     threads[i].stop()
@@ -38,8 +47,8 @@ try:
                     break
                 
         for i in range(len(threads)):
-            if threads[i].name == 'classifier':
-                if threads[i].isIdle():
+            if threads[i].name == 'classifier' and count_classifiers()/int(config['crawler']['maxthreads']) > 0.2:
+                if threads[i].isIdle() or red.scard(config['redis']['images-key']) < 10:
                     threads[i].stop()
                     threads[i] = PinterestScraper(name = "scraper")
                     threadnames[i] == "scraper"
