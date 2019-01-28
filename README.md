@@ -37,7 +37,7 @@ The API has several endpoints, these are:
 ### `/search`
 This is the main endpoint, used for searching the database of tagged images. The query is based on hex colour codes specified by the user. A request to this endpoint should have a body of the form:
 ```
-        {"colours" : [colour],
+                    {"colours" : [colour],
 		     "pagesize": pagesize,
 		     "expire" : expire}
 ```
@@ -47,7 +47,7 @@ This is the main endpoint, used for searching the database of tagged images. The
  - `pagesize` (optional), an integer specifying the pagesize (i.e. number of images) per page.
  - `expire` (optional), an integer specifying the desired expiry time in seconds for the next page token. This defaults to 2 days and if above a configurable maximum duration it will be set to the maximum duration.
 
-Presuming you've done everything correctly up to this point and I have written good code (a bold assumption), the response from this endpoint should look like:
+An example of this query is included in `post_loc.json` Presuming you've done everything correctly up to this point and I have written good code (a bold assumption), the response from this endpoint should look like:
 ```
 				            {"method" : "/search",
                      "next" : pagekey,
@@ -68,6 +68,8 @@ Presuming you've done everything correctly up to this point and I have written g
  - `[colour]`, the array of colours specified in the initial user request
  -  `pagesize` the size of the page
  - `[image]`, the list of pinterest cdn URLs to images found by the search
+
+In the case where the search finds no matches in the database, this endpoint will return an HTTP 204 No content response and no response body.
 
 ### `/next/<token>`
 
@@ -91,6 +93,8 @@ where the values are the following:
  - `[colour]`, the array of colours specified in the initial user request
  -  `pagesize` the size of the page
  - `[image]`, the list of pinterest cdn URLs to images found by the search
+
+In the event that there are no matches to the query remaining or the token has expired, this endpoint will return an HTTP 204 No Content response and no body.
  
 ### `/next/delete/<token>`
 

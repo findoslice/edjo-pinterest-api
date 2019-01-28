@@ -19,8 +19,8 @@ red3 = Redis(db=int(config['redis']['coloursdb']))
 
 es = DBHelper()
 
-@api.route('/search')
-def test():
+@api.route('/search', methods = ['GET', 'POST'])
+def search():
 
     data = dict(request.data)
     pagesize = 25
@@ -64,12 +64,14 @@ def test():
                      "pagesize" : pagesize,
                      "images" : page})), status.HTTP_200_OK
 
-@api.route('/next/<token>')
+@api.route('/next/<token>', methods = ['GET', 'POST'])
 def next(token):
 
     pagesize = int(token.split('b')[0])
 
     info = red2.get(token)
+    if info is None:
+        return '', status.HTTP_204_NO_CONTENT
     expire = red2.pttl(token)
     cursor = int(info.decode('utf-8'))
     colours = [colour.decode('utf-8') for colour in red3.smembers(token)]
@@ -78,6 +80,9 @@ def next(token):
     print(pagesize, cursor)
 
     page = es.searchDB(colours, pagesize = pagesize, cursor = cursor)
+    if len(page) == 0:
+        red2.delete(token)
+        return '', status.HTTP_204_NO_CONTENT
 
 
     return (jsonify({"method" : "/next/" + token,
@@ -90,7 +95,7 @@ def next(token):
                      "pagesize" : pagesize,
                      "images" : page})), status.HTTP_200_OK
 
-@api.route('/next/delete/<token>')
+@api.route('/next/delete/<token>', methods = ['GET', 'POST', 'DELETE'])
 def delete_next(token):
 
     red2.delete(token)
@@ -98,13 +103,13 @@ def delete_next(token):
 
     return '', status.HTTP_200_OK
 
-@api.route('/are/you/a/tea/pot')
+@api.route('/are/you/a/tea/pot', methods = ['GET', 'POST'])
 def am_I_a_tea_pot():
 
     return (jsonify({'teapot':{'status':'true'}})), 418
 
 
-@api.route('/count')
+@api.route('/count', methods = ['GET', 'POST'])
 def count():
 
     data = dict(request.data)
@@ -120,7 +125,7 @@ def count():
                      "colours" : data['colours'],
                      "count" : count})), status.HTTP_200_OK
 
-@api.route('/count/all')
+@api.route('/count/all', methods = ['GET', 'POST'])
 def count_all():
 
     return (jsonify({"method" : "/count/all",
