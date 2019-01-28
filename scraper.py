@@ -8,6 +8,10 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+from threading import Thread
+
+from pprint import pprint
+
 from signal import SIGKILL
 
 from requests import get
@@ -17,9 +21,11 @@ import os,re
 import asyncio
 
 
-class PinterestCrawler(object):
+class PinterestScraper(Thread):
 
-    def __init__(self):
+    def __init__(self, name = "scraper"):
+
+        Thread.__init__(self, name = name)
 
         self.config = ConfigParser()
         self.config.read('config.ini')
@@ -41,15 +47,26 @@ class PinterestCrawler(object):
         self.search_count = 1
         self.sum_search_times = 0
 
+        self.is_stopped = False
+        self.name = name
+
+    def stop(self):
+        self.is_stopped = True
+
+    def run(self):
+        self.search_pinterest("home improvement")
+
     def new_browser(self):
         return webdriver.Chrome(executable_path=os.path.abspath("chromedriver"), chrome_options=self.options)
 
 
     def search_pinterest(self, term):
-        wait = WebDriverWait(self.browser,4)
+        wait = WebDriverWait(self.browser,10)
         try:
             self.browser.get("https://www.pinterest.co.uk/search/pins/?q=" + term.lower())
             wait.until(EC.visibility_of_element_located((By.TAG_NAME, "img")))
+            #wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "tBJ dyH iFc SMy MF7 erh tg7 IZT mWe")))
+
             
             
 
@@ -60,44 +77,50 @@ class PinterestCrawler(object):
 
             for image in set([imagetag["src"] for imagetag in images]):
                 try:
-                    self.db.sadd(self.config['redis']['images-key'], image)
+                    self.db2.sadd(self.config['redis']['images-key'], image)
                 except:
                     continue
 
 
-            search_terms = soup.find_all("div", class_ = "_wa _0 _1 _2 _wd _36 _f _b _6")
+            search_terms = soup.find_all("div", class_ = "tBJ dyH iFc SMy yTZ erh tg7 IZT mWe")
             if len(search_terms) != 0:
                 self.db.sadd(str(self.config["redis"]["searchterms-key"]), *set([str(t.get_text()) for t in search_terms]))
 
             self.sum_search_times += time() - self.last_time
 
-            print("Search term: {}\nsearch carried out in: {} seconds \ntotal time elapsed: {} seconds\nAverage search time: {}\nTime per Image: {}\nUnused search terms: {}\nUsed search terms: {}\nImages collected: {}\n".format(term, 
+            """print("Search term: {}\nsearch carried out in: {} seconds \ntotal time elapsed: {} seconds\nAverage search time: {}\nTime per Image: {}\nUnused search terms: {}\nUsed search terms: {}\nImages collected: {}\n".format(term, 
                                                                                                                                                                                                                                     time()-self.last_time, 
                                                                                                                                                                                                                                     time()-self.initial_time,
                                                                                                                                                                                                                                     self.sum_search_times/self.search_count,
                                                                                                                                                                                                                                     1/(len(images)/(time()-self.last_time)),
-                                                                                                                                                                                                                                    self.db.scard('pizza'), 
+                                                                                                                                                                                                                                    self.db.scard(self.config['redis']['searchterms-key']), 
                                                                                                                                                                                                                                     self.search_count, 
-                                                                                                                                                                                                                                    self.db.scard(self.config['redis']['images-key'])))
+                                                                                                                                                                                                                                    self.db2.scard(self.config['redis']['images-key'])))
+            """
             self.search_count += 1
         
         except TimeoutException:
             self.browser.close()
             self.browser.service.process.send_signal(SIGKILL)
             self.browser.quit()
-            os.system("killall chrome")
+            #os.system("killall chrome")
             self.browser = self.new_browser()
             print("failed search")
 
         term = self.db.spop(str(self.config["redis"]["searchterms-key"])).decode('utf-8')
         self.last_time = time()
+        if not self.is_stopped:
+            self.search_pinterest(term)
+        else:
+            self.browser.close()
+            self.browser.service.process.send_signal(SIGKILL)
+            self.browser.quit()
+            return
 
-        self.search_pinterest(term)
-
-
-pc = PinterestCrawler()
-time1 = time()
-pc.search_pinterest("home improvement")
-print(time() - time1)
-pc.browser.close()
-#get_pinterest_image("https://findoslice.com")
+if __name__ == "__main__":
+    pc = PinterestScraper()
+    #time1 = time()
+    pc.search_pinterest("home improvement")
+    #print(time() - time1)
+    #pc.browser.close()
+    #get_pinterest_image("https://findoslice.com")

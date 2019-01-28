@@ -118,13 +118,13 @@ def count():
 
     return (jsonify({"method" : "/count",
                      "colours" : data['colours'],
-                     "result" : count})), status.HTTP_200_OK
+                     "count" : count})), status.HTTP_200_OK
 
 @api.route('/count/all')
 def count_all():
 
     return (jsonify({"method" : "/count/all",
-                     "result" : es.count_all()})), status.HTTP_200_OK
+                     "count" : es.count_all()})), status.HTTP_200_OK
 
 
 
