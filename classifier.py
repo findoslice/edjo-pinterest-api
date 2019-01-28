@@ -10,6 +10,7 @@ class Classifier(Thread):
 
     def __init__(self, name = "classifier"):
 
+        # threading related vraiables
         Thread.__init__(self, name = name)
         self.name = name
 
@@ -20,6 +21,7 @@ class Classifier(Thread):
 
         self.redis = Redis(db = int(self.config['redis']['imagesdb']))
 
+        # also threading related
         self.is_stopped = False
         self.is_idle = False
 
@@ -35,10 +37,14 @@ class Classifier(Thread):
 
         try:
             self.is_idle = False
+            # while there are untagged images remaining
             while self.redis.scard(self.config['redis']['images-key']) != 0:
+                # check if thread is active
                 if not self.is_stopped:
+                    # choose and remove random untagged image
                     image = self.redis.spop(self.config['redis']['images-key']).decode('utf-8')
                     try:
+                        # get_colours returns the code and its frequency in a tuple
                         colours = [colour[1] for colour in get_colours(image)]
                     except:
                         continue
@@ -48,14 +54,16 @@ class Classifier(Thread):
                         "colours" : colours
                     }
                     try:
+                        # insert into elasticsearch
                         resp = self.es.index(index="images", doc_type="tagged", body = imagebody, id = (int(sha1(image.encode()).hexdigest(), 16)%10**10))
                         #print(resp)
                     except:
                         continue
                 else:
                     return
-            self.is_idle = True
+            # if there aren't any images to classify
             while self.redis.scard(self.config['redis']['images-key']) == 0:
+                self.is_idle = True
                 if not self.is_stopped:
                     sleep(1)
                 else:

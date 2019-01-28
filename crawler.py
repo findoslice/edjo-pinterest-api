@@ -12,7 +12,7 @@ config.read('config.ini')
 red = Redis(db = 1)
 
 for i in range(int(config['crawler']['maxthreads'])):
-    print("skeet")
+    # instantiate new threads as 50:50 balance of scraper and classifier
     if i%2 == 0:
         threads.append(PinterestScraper(name = "scraper"))
         threadnames.append("scraper")
@@ -36,7 +36,8 @@ def count_classifiers():
 
 try:
     while True:
-        
+        # remove a scraper and add a classifier if too many unclassified images
+        # ensure at least some scrapers remain
         if red.scard(config['redis']['images-key']) > 30 and count_scrapers()/int(config['crawler']['maxthreads']) > 0.2:
             for i in range(len(threads)):
                 if threads[i].name == "scraper":
@@ -47,6 +48,7 @@ try:
                     break
                 
         for i in range(len(threads)):
+            # check if classifiers are idle and if so replace one with a scraper
             if threads[i].name == 'classifier' and count_classifiers()/int(config['crawler']['maxthreads']) > 0.2:
                 if threads[i].isIdle() or red.scard(config['redis']['images-key']) < 10:
                     threads[i].stop()

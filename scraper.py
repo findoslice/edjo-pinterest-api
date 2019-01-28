@@ -24,7 +24,8 @@ import asyncio
 class PinterestScraper(Thread):
 
     def __init__(self, name = "scraper"):
-
+        
+        # call super constructor
         Thread.__init__(self, name = name)
 
         self.config = ConfigParser()
@@ -32,10 +33,10 @@ class PinterestScraper(Thread):
 
         self.options = webdriver.chrome.options.Options()
 
+        # options to speed up chrome and ensure it is headless
         self.options.add_argument("--headless")
         self.options.add_argument("--test-type")
         self.options.add_argument('--ignore-certificate-errors')
-        #self.options.binary_location = '/usr/bin/google-chrome'
         self.options.binary_location = str(self.config['chrome']['binary'])
         self.browser = self.new_browser()
 
@@ -64,6 +65,7 @@ class PinterestScraper(Thread):
         wait = WebDriverWait(self.browser,10)
         try:
             self.browser.get("https://www.pinterest.co.uk/search/pins/?q=" + term.lower())
+            # wait until images have rendered
             wait.until(EC.visibility_of_element_located((By.TAG_NAME, "img")))
             #wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "tBJ dyH iFc SMy MF7 erh tg7 IZT mWe")))
 
@@ -77,13 +79,16 @@ class PinterestScraper(Thread):
 
             for image in set([imagetag["src"] for imagetag in images]):
                 try:
+                    #save images in untagged images set
                     self.db2.sadd(self.config['redis']['images-key'], image)
                 except:
                     continue
 
-
+            # find all pinterest recommended search terms
+            # this class name is changed regularly so please let me know if it breaks!
             search_terms = soup.find_all("div", class_ = "tBJ dyH iFc SMy yTZ erh tg7 IZT mWe")
             if len(search_terms) != 0:
+                # add search terms to set
                 self.db.sadd(str(self.config["redis"]["searchterms-key"]), *set([str(t.get_text()) for t in search_terms]))
 
             self.sum_search_times += time() - self.last_time
@@ -100,18 +105,24 @@ class PinterestScraper(Thread):
             self.search_count += 1
         
         except TimeoutException:
+            # sometimes browser times out when loading
+            # quit browser and start a new instance if this happens
             self.browser.close()
+            # ensure process stops
             self.browser.service.process.send_signal(SIGKILL)
             self.browser.quit()
             #os.system("killall chrome")
             self.browser = self.new_browser()
             print("failed search")
 
+        # choose new search term at random
         term = self.db.spop(str(self.config["redis"]["searchterms-key"])).decode('utf-8')
         self.last_time = time()
+        # check if stopped (for purpose of threading)
         if not self.is_stopped:
             self.search_pinterest(term)
         else:
+            # same as disposing on timeout error
             self.browser.close()
             self.browser.service.process.send_signal(SIGKILL)
             self.browser.quit()
