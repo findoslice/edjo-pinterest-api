@@ -11,11 +11,15 @@ pip3 install -r requirements.txt
 ```
 it is advisable to do this in a virtual environment as a specific version of numpy is required.
 
-In addition to these installation requirements it's also essential to configure the system variables in the `config.ini` file. It is essential to set the host/port for redis and elasticsearch to the correct ones for your system, as well as the chrome binary location to where it is on your computer. In addition, it is possible to configure which redis databases are used (so as not to interfere with others on your system), the expiry time for next page tokens in the api, and which parser beautifulsoup uses (this is not advised in case the behaviour changes).
+In addition to these installation requirements it's also essential to configure the system variables in the `config.ini` file. It is essential to set the host/port for redis and elasticsearch to the correct ones for your system, as well as the chrome binary location to where it is on your computer. In addition, it is possible to configure which redis databases are used (so as not to interfere with others on your system), the expiry time for next page tokens in the api, and which parser beautifulsoup uses (this is not advised in case the behaviour changes), and the number of threads to be used in the crawler.
 
 ## Usage ##
-The crawler software can be ran using 2 methods, either launching the individual worker files separately, or by running the launch script (coming soon).
+The crawler software can be ran using 2 methods, either launching the individual worker files separately, or by running the launch script.
 
+It is highly advisable to use the launch script `crawler.py` as this will handle load balancing itself to optimise efficiency, if you chose to do this then all you need to do is run the following command from the terminal:
+```bash
+python3 crawler.py
+```
 If you choose to employ the first method it is not overly complicated, simply run the file `scraper.py` to scrape images from pinterest and `classifier.py` to classify images and enter them into the elasticsearch database (these tasks can be ran concurrently).
 
 To run the API, simply enter the following command into a terminal from the repo's top directory
