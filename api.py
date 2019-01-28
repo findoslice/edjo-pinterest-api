@@ -73,7 +73,7 @@ def next(token):
     #find pagesize from token
     pagesize = int(token.split('b')[0])
 
-    cursor = red2.get(token)
+    info = red2.get(token)
     if info is None:
         # if token has expired return no content
         return '', status.HTTP_204_NO_CONTENT
